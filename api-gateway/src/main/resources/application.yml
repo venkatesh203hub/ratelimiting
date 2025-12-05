@@ -24,7 +24,7 @@ spring:
             - Path=/orders/**                                   
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter   # <-- global rate limiting
+            - name: RequestRateLimiter   # <-- global rate limiting    (if you want to stop using radis rate limiting and use bucket4j rate limiting comment out this "- name: RequestRateLimiter" block )
               args:
                 key-resolver: "#{@ipKeyResolver}"
                 redis-rate-limiter.replenishRate: 5   # 5 req / second
