@@ -1,0 +1,74 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+
+                    # http://localhost:8181/orders (original url)  http://localhost:8080/orders/orders(api-gw url)
+                                          #Predicate /orders/** matches
+                                          #StripPrefix=1 removes /orders
+                                          #The backend receives /orders, not /orders/orders
+      routes:
+        - id: orders-service
+          uri: lb://orders-service       # <-- load balanced via Eureka
+          predicates:
+            - Path=/orders/**                                   
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter   # <-- global rate limiting
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 5   # 5 req / second
+                redis-rate-limiter.burstCapacity: 10  # small bursts
+                
+        - id: deliverys-service
+          uri: lb://deliverys-service       # <-- load balanced via Eureka
+          predicates:
+            - Path=/deliverys/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter   # <-- global rate limiting
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 5   # 5 req / second
+                redis-rate-limiter.burstCapacity: 10  # small bursts
+                
+        - id: inventory-service
+          uri: lb://inventory-service       # <-- load balanced via Eureka
+          predicates:
+            - Path=/inventorys/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter   # <-- global rate limiting
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 5   # 5 req / second
+                redis-rate-limiter.burstCapacity: 10  # small bursts        
+                
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    prometheus:
+      enabled: true

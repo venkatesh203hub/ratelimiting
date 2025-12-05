@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+
+  - job_name: 'orders-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['orders-service:8181']  # inside container (same as server.port)
+      
+  - job_name: 'deliverys-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['deliverys-service:8282']
+      
+  - job_name: 'inventory-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['inventory-service:8383']
+
+  - job_name: 'discovery-server'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['discovery-server:8761']
+      
+

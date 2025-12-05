@@ -1,0 +1,20 @@
+server:
+  port: 8282   # random -> easier to run multiple instances
+
+spring:
+  application:
+    name: deliverys-service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+      
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    prometheus:
+      enabled: true

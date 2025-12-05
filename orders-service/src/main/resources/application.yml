@@ -1,0 +1,61 @@
+server:
+  port: 8181   # random -> easier to run multiple instances
+
+spring:
+  application:
+    name: orders-service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+      
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus,metrics"
+  endpoint:
+    prometheus:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    circuit-breaker-aspect-order: 1   # lower priority
+    instances:
+      inventoryClient:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+
+  retry:
+    retry-aspect-order: 2             # higher priority → executed OUTSIDE CB
+    instances:
+      inventoryClient:
+        max-attempts: 3
+        wait-duration: 200ms
+        retry-exceptions:
+          - java.io.IOException
+          - feign.RetryableException
+          - feign.FeignException$ServiceUnavailable
+
+  ratelimiter:
+    instances:
+      inventoryClient:
+        limit-for-period: 5           # 5 calls
+        limit-refresh-period: 1s      # per second
+        timeout-duration: 0           # don't wait if limited
+
+  bulkhead:
+    instances:
+      inventoryClient:
+        max-concurrent-calls: 10
+        max-wait-duration: 0
+
+  timelimiter:
+    instances:
+      inventoryClient:
+        timeout-duration: 2s
+        cancel-running-future: true

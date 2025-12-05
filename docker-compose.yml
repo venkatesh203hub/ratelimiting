@@ -1,0 +1,135 @@
+version: "3.9"
+
+networks:
+  backend:
+  monitoring:
+
+volumes:
+  redis-data:
+  grafana-data:
+  prometheus-data:
+
+services:
+  # Eureka Discovery Server
+  discovery-server:
+    build: ./discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - backend
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    depends_on:
+      - discovery-server
+      - redis
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_REDIS_HOST=redis
+    networks:
+      - backend
+
+  # Orders Service (example backend)
+  orders-service:
+    build: ./orders-service
+    container_name: orders-service
+    depends_on:
+      - discovery-server
+    ports:
+      - "8181:8181"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    networks:
+      - backend
+      
+      
+  # deliverys Service (example backend)
+  deliverys-service:
+    build: ./deliverys-service
+    container_name: deliverys-service
+    depends_on:
+      - discovery-server
+    ports:
+      - "8282:8282"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    networks:
+      - backend
+      
+   # inventory Service (example backend)
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    depends_on:
+      - discovery-server
+    ports:
+      - "8383:8383"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    networks:
+      - backend
+
+  # Redis for rate limiting
+  redis:
+    image: redis:latest
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend
+
+  # RedisInsight UI
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    depends_on:
+      - redis
+    ports:
+      - "8001:8001"
+    networks:
+      - backend
+
+  # Prometheus for metrics scraping
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    networks:
+      - backend
+      - monitoring
+
+  # Grafana for dashboards (UI)
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - monitoring
